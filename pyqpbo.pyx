@@ -13,7 +13,7 @@ cdef extern from "QPBO.h":
         bool Save(char* filename, int format=0)
         bool Load(char* filename)
         void Reset()
-        NodeId AddNode(int num=1)
+        NodeId AddNode(int num)
         void AddUnaryTerm(NodeId i, REAL E0, REAL E1)
         EdgeId AddPairwiseTerm(NodeId i, NodeId j, REAL E00, REAL E01, REAL E10, REAL E11)
         void AddPairwiseTerm(EdgeId e, NodeId i, NodeId j, REAL E00, REAL E01, REAL E10, REAL E11)
