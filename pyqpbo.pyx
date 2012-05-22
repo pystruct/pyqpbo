@@ -136,8 +136,9 @@ def alpha_expansion_grid(np.ndarray[np.int32_t, ndim=3, mode='c'] data_cost,
     cdef int n_edges = (w - 1) * h + (h - 1) * w
     cdef int n_nodes = w * h
     cdef np.ndarray[np.int32_t, ndim=2] x
+    cdef int old_label
 
-    cdef n_iter = 2
+    cdef n_iter = 1
 
     # initial guess
     #x = np.argmin(data_cost, axis=2)
@@ -148,12 +149,12 @@ def alpha_expansion_grid(np.ndarray[np.int32_t, ndim=3, mode='c'] data_cost,
 
     # create qpbo object
     cdef QPBO[int] * q = new QPBO[int](n_nodes, n_edges)
-    q.AddNode(n_nodes)
     #cdef int* data_ptr = <int*> data_cost.data
 
     for n in xrange(n_iter):
-        print("iteration: %d" % n_iter)
-        for alpha in xrange(n_labels):
+        print("iteration: %d" % n)
+        for alpha in [0, 1]:
+            q.AddNode(n_nodes)
             print("alpha: %d" % alpha)
             for i in xrange(h):
                 for j in xrange(w):
@@ -176,8 +177,10 @@ def alpha_expansion_grid(np.ndarray[np.int32_t, ndim=3, mode='c'] data_cost,
                         #q.AddPairwiseTerm(node_id, node_id + 1, pair[0, 0], pair[1, 0], pair[0, 1], pair[1, 1])
             q.Solve()
             for i in xrange(n_nodes):
-                x_ptr[i] = q.GetLabel(i)
-                print("%d : %d" % (i, q.GetLabel(i)))
+                old_label = x_ptr[i]
+                if q.GetLabel(i) == 1:
+                    x_ptr[i] = alpha
+                print("node: %d, old label: %d, new label: %d, cut: %d" % (i, old_label, x_ptr[i], q.GetLabel(i)))
             q.Reset()
             print("fin")
     return x
