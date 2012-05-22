@@ -1,6 +1,46 @@
 import matplotlib.pyplot as plt
 import numpy as np
 from pyqpbo import binary_grid
+from gco_python import cut_simple
+
+
+def example_checkerboard():
+    # generate a checkerboard
+    x = np.ones((10, 12))
+    x[::2, ::2] = -1
+    x[1::2, 1::2] = -1
+    x_noisy = x + np.random.normal(0, 1.5, size=x.shape)
+    x_thresh = x_noisy > .0
+
+    # create unaries
+    unaries = x_noisy
+    # as we convert to int, we need to multipy to get sensible values
+    unaries = (10 * np.dstack([unaries, -unaries]).copy("C")).astype(np.int32)
+    # create potts pairwise
+    pairwise = 100 * np.eye(2, dtype=np.int32)
+
+    # do simple cut
+    result_qpbo = binary_grid(unaries, pairwise)
+    # make non-labeled zero (instead of negative)
+    result_qpbo_vis = result_qpbo.copy()
+    result_qpbo_vis[result_qpbo < 0] = 0
+    result_qpbo_vis[result_qpbo == 0] = -1
+
+    # plot results
+    plt.subplot(231, title="original")
+    plt.imshow(x, interpolation='nearest')
+    plt.subplot(232, title="noisy version")
+    plt.imshow(x_noisy, interpolation='nearest')
+    plt.subplot(233, title="rounded to integers")
+    plt.imshow(unaries[:, :, 0], interpolation='nearest')
+    plt.subplot(234, title="thresholding result")
+    plt.imshow(x_thresh, interpolation='nearest')
+    plt.subplot(235, title="qpbo")
+    plt.imshow(result_qpbo_vis, interpolation='nearest')
+    #plt.subplot(236, title="graphcut")
+    #plt.imshow(result_gc, interpolation='nearest')
+
+    plt.show()
 
 
 def example_binary():
@@ -18,17 +58,8 @@ def example_binary():
     pairwise = -10 * np.eye(2, dtype=np.int32)
 
     # do simple cut
-    result = binary_grid(unaries, pairwise)
-
-    # use the gerneral graph algorithm
-    # first, we construct the grid graph
-    #inds = np.arange(x.size).reshape(x.shape)
-    #horz = np.c_[inds[:, :-1].ravel(), inds[:, 1:].ravel()]
-    #vert = np.c_[inds[:-1, :].ravel(), inds[1:, :].ravel()]
-    #edges = np.vstack([horz, vert]).astype(np.int32)
-
-    # we flatten the unaries
-    #result_graph = cut_from_graph(edges, unaries.reshape(-1, 2), pairwise)
+    result_qpbo = binary_grid(unaries, pairwise)
+    result_gc = cut_simple(unaries, pairwise)
 
     # plot results
     plt.subplot(231, title="original")
@@ -39,10 +70,10 @@ def example_binary():
     plt.imshow(unaries[:, :, 0], interpolation='nearest')
     plt.subplot(234, title="thresholding result")
     plt.imshow(x_thresh, interpolation='nearest')
-    plt.subplot(235, title="cut_simple")
-    plt.imshow(result, interpolation='nearest')
-    #plt.subplot(236, title="cut_from_graph")
-    #plt.imshow(result_graph.reshape(x.shape), interpolation='nearest')
+    plt.subplot(235, title="qpbo")
+    plt.imshow(result_qpbo, interpolation='nearest')
+    plt.subplot(236, title="graphcut")
+    plt.imshow(result_gc, interpolation='nearest')
 
     plt.show()
 
@@ -79,5 +110,6 @@ def example_binary():
     #plt.show()
 
 
-example_binary()
+#example_binary()
+example_checkerboard()
 #example_multinomial()
