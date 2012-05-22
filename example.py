@@ -5,8 +5,8 @@ from pyqpbo import binary_grid
 
 def example_binary():
     # generate trivial data
-    x = np.ones((10, 10))
-    x[:, 5:] = -1
+    x = np.ones((10, 12))
+    x[:, 6:] = -1
     x_noisy = x + np.random.normal(0, 0.8, size=x.shape)
     x_thresh = x_noisy > .0
 

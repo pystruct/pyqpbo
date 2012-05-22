@@ -47,7 +47,6 @@ def binary_grid(np.ndarray[np.int32_t, ndim=3, mode='c'] data_cost,
 
     for i in xrange(h):
         for j in xrange(w):
-            print("e : % d" % e)
             node_id = i * w + j
             if i > 0:
                 #up
