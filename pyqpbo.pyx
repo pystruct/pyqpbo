@@ -137,11 +137,13 @@ def alpha_expansion_grid(np.ndarray[np.int32_t, ndim=3, mode='c'] data_cost,
     cdef int n_nodes = w * h
     cdef np.ndarray[np.int32_t, ndim=2] x
     cdef int old_label
+    cdef int label
+    cdef int changes
 
-    cdef n_iter = 1
+    cdef n_iter = 5
+    np.random.seed()
 
     # initial guess
-    #x = np.argmin(data_cost, axis=2)
     x = np.zeros((h, w), dtype=np.int32)
     print("x shape: (%d, %d)" %(x.shape[0], x.shape[1]))
     print("x size: %d" %x.size)
@@ -153,34 +155,41 @@ def alpha_expansion_grid(np.ndarray[np.int32_t, ndim=3, mode='c'] data_cost,
 
     for n in xrange(n_iter):
         print("iteration: %d" % n)
-        for alpha in [0, 1]:
+        for alpha in np.random.permutation(n_labels):
             q.AddNode(n_nodes)
-            print("alpha: %d" % alpha)
             for i in xrange(h):
                 for j in xrange(w):
                     node_id = i * w + j
                     # first state is "keep x", second is "switch to alpha"
-                    # TODO: what if state is already alpha?
-                    q.AddUnaryTerm(node_id, data_cost[i, j, x[i, j]], data_cost[i, j, alpha])
-                    print("added node %d, x[i,j]=%d, cost: %d %d" % (node_id, x[i,j], data_cost[i,j,x[i,j]], data_cost[i,j,alpha]))
-                    #if i < h - 1:
-                        ##down
+                    # TODO: what if state is already alpha? Need to collapse?
+                    if alpha == x[i, j]:
+                        q.AddUnaryTerm(node_id, data_cost[i, j, x[i, j]], 100000)
+                    else:
+                        q.AddUnaryTerm(node_id, data_cost[i, j, x[i, j]], data_cost[i, j, alpha])
+                    #print("added node %d, x[i,j]=%d, cost: %d %d" % (node_id, x[i,j], data_cost[i,j,x[i,j]], data_cost[i,j,alpha]))
+                    if i < h - 1:
+                        #down
                         #print(x[i, j])
                         #print(alpha)
-                        #pair = smoothness_cost[[x[i, j], alpha], :][:, [x[i + 1, j], alpha]]
+                        pair = smoothness_cost[[x[i, j], alpha], :][:, [x[i + 1, j], alpha]]
                         #print(pair)
-                        #q.AddPairwiseTerm(node_id, node_id + w, pair[0, 0], pair[1, 0], pair[0, 1], pair[1, 1])
-                    #if j < w - 1:
-                        ##right
-                        #pair = smoothness_cost[[x[i, j], alpha], :][:, [x[i, j + 1], alpha]]
+                        q.AddPairwiseTerm(node_id, node_id + w, pair[0, 0], pair[1, 0], pair[0, 1], pair[1, 1])
+                    if j < w - 1:
+                        #right
+                        pair = smoothness_cost[[x[i, j], alpha], :][:, [x[i, j + 1], alpha]]
                         #print(pair)
-                        #q.AddPairwiseTerm(node_id, node_id + 1, pair[0, 0], pair[1, 0], pair[0, 1], pair[1, 1])
+                        q.AddPairwiseTerm(node_id, node_id + 1, pair[0, 0], pair[1, 0], pair[0, 1], pair[1, 1])
             q.Solve()
+            changes = 0
             for i in xrange(n_nodes):
                 old_label = x_ptr[i]
-                if q.GetLabel(i) == 1:
+                label = q.GetLabel(i)
+                if label == 1:
                     x_ptr[i] = alpha
-                print("node: %d, old label: %d, new label: %d, cut: %d" % (i, old_label, x_ptr[i], q.GetLabel(i)))
+                    changes += 1
+                #print("node: %d, old label: %d, new label: %d, cut: %d" % (i, old_label, x_ptr[i], q.GetLabel(i)))
+                if label < 0:
+                    print("LABEL <0 !!!")
+            print("alpha: %d, changes: %d" % (alpha, changes))
             q.Reset()
-            print("fin")
     return x
