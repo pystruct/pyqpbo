@@ -1,3 +1,11 @@
+###############################################################
+# Python bindings for QPBO algorithm by Vladimir Kolmogorov.
+#
+# Author: Andreas Mueller <amueller@ais.uni-bonn.de>
+# License: BSD 3-clause
+#
+# More infos on my blog: peekaboo-vision.blogspot.com
+
 import numpy as np
 cimport numpy as np
 from libcpp cimport bool
@@ -222,6 +230,61 @@ def alpha_expansion_grid(np.ndarray[np.int32_t, ndim=3, mode='c'] data_cost,
                         #right
                         pair = smoothness_cost[[x[i, j], alpha], :][:, [x[i, j + 1], alpha]]
                         q.AddPairwiseTerm(node_id, node_id + 1, pair[0, 0], pair[0, 1], pair[1, 0], pair[1, 1])
+            q.Solve()
+            q.ComputeWeakPersistencies()
+
+            changes = 0
+            for i in xrange(n_nodes):
+                old_label = x_ptr[i]
+                label = q.GetLabel(i)
+                if label == 1:
+                    x_ptr[i] = alpha
+                    changes += 1
+                if label < 0:
+                    print("LABEL <0 !!!")
+            print("alpha: %d, changes: %d" % (alpha, changes))
+            # compute energy:
+            q.Reset()
+    del q
+    return x
+
+
+def alpha_expansion_graph(np.ndarray[np.int32_t, ndim=2, mode='c'] edges,
+        np.ndarray[np.int32_t, ndim=2, mode='c'] data_cost,
+        np.ndarray[np.int32_t, ndim=2, mode='c'] smoothness_cost, int n_iter=5):
+
+    cdef int n_nodes = data_cost.shape[0]
+    cdef int n_labels =  data_cost.shape[1]
+    cdef int n_edges = edges.shape[0]
+    cdef np.ndarray[np.int32_t, ndim=1] x
+    cdef int old_label
+    cdef int label
+    cdef int changes
+    np.random.seed()
+
+    # initial guess
+    x = np.zeros(n_nodes, dtype=np.int32)
+    cdef int* x_ptr = <int*> x.data
+
+    # create qpbo object
+    cdef QPBO[int] * q = new QPBO[int](n_nodes, n_edges)
+    #cdef int* data_ptr = <int*> data_cost.data
+    srand(1)
+    for n in xrange(n_iter):
+        print("iteration: %d" % n)
+        for alpha in np.random.permutation(n_labels):
+            q.AddNode(n_nodes)
+            for i in xrange(n_nodes):
+                # first state is "keep x", second is "switch to alpha"
+                # TODO: what if state is already alpha? Need to collapse?
+                if alpha == x[i]:
+                    q.AddUnaryTerm(i, data_cost[i, x[i]], 100000)
+                else:
+                    q.AddUnaryTerm(i, data_cost[i, x[i]], data_cost[i, alpha])
+            for e in edges:
+                #down
+                pair = smoothness_cost[[x[e[0]], alpha], :][:, [x[e[1]], alpha]]
+                q.AddPairwiseTerm(e[0], e[1], pair[0, 0], pair[0, 1], pair[1, 0], pair[1, 1])
             q.Solve()
             q.ComputeWeakPersistencies()
 

@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 from pyqpbo import binary_grid, alpha_expansion_grid, binary_graph
+from pyqpbo import alpha_expansion_graph
 from gco_python import cut_simple
 
 from IPython.core.debugger import Tracer
@@ -138,41 +139,32 @@ def example_multinomial_checkerboard():
     # create potts pairwise
     pairwise = 100 * np.eye(3, dtype=np.int32)
 
-    # do simple cut
-    result_qpbo = alpha_expansion_grid(unaries, pairwise, n_iter=3,
-            improve=False)
-    energies = []
-    for i, x in enumerate(result_qpbo):
-        binarized = np.zeros(unaries.shape)
-        gx, gy = np.ogrid[:unaries.shape[0], :unaries.shape[1]]
-        binarized[gx, gy, x] = 1
-        vert = np.dot(binarized[1:, :].reshape(-1, 3).T, binarized[:-1,
-            :].reshape(-1, 3))
-        horz = np.dot(binarized[:, 1:].reshape(-1, 3).T, binarized[:,
-            :-1].reshape(-1, 3))
-        edges = vert + horz
-        pw = np.sum(pairwise * edges)
-        un = unaries[gx, gy, x].sum()
-        print("i: %d pairwise: %d, unaries: %d, sum: %d" % (i, pw, un, pw +
-            un))
-        energies.append(pw + un)
-        plt.matshow(x)
-        plt.savefig("iter_%03d.png" % i)
-        plt.close()
-    plt.matshow(result_qpbo[np.argmin(energies)])
-    plt.figure()
+    # do alpha expansion
+    result_qpbo = alpha_expansion_grid(unaries, pairwise, n_iter=4)
+
+    # use the gerneral graph algorithm
+    # first, we construct the grid graph
+    inds = np.arange(x_org.size).reshape(x_org.shape)
+    horz = np.c_[inds[:, :-1].ravel(), inds[:, 1:].ravel()]
+    vert = np.c_[inds[:-1, :].ravel(), inds[1:, :].ravel()]
+    edges = np.vstack([horz, vert]).astype(np.int32)
+    result_qpbo_graph = alpha_expansion_graph(edges, unaries.reshape(-1, 3),
+            pairwise, n_iter=4)
+
     # plot results
-    plt.subplot(131, title="original")
+    plt.subplot(221, title="original")
     plt.imshow(x_org, interpolation='nearest')
-    plt.subplot(132, title="thresholding result")
+    plt.subplot(222, title="thresholding result")
     plt.imshow(x_thresh, interpolation='nearest')
-    plt.subplot(133, title="qpbo")
-    plt.imshow(result_qpbo[-1], interpolation='nearest')
+    plt.subplot(223, title="qpbo")
+    plt.imshow(result_qpbo, interpolation='nearest')
+    plt.subplot(224, title="qpbo graph")
+    plt.imshow(result_qpbo_graph.reshape(x_org.shape), interpolation='nearest')
 
     plt.show()
 
-example_binary()
+#example_binary()
 #example_checkerboard()
 #example_multinomial()
-#example_multinomial_checkerboard()
+example_multinomial_checkerboard()
 #example_VH()
