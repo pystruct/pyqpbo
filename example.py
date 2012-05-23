@@ -1,6 +1,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
-from pyqpbo import binary_grid, alpha_expansion_grid
+from pyqpbo import binary_grid, alpha_expansion_grid, binary_graph
 from gco_python import cut_simple
 
 from IPython.core.debugger import Tracer
@@ -59,9 +59,19 @@ def example_binary():
     pairwise = -10 * np.eye(2, dtype=np.int32)
 
     # do simple cut
-    #result_qpbo = binary_grid(unaries, pairwise)
-    result_qpbo = alpha_expansion_grid(unaries, pairwise)
-    result_gc = cut_simple(unaries, pairwise)
+    result_qpbo = binary_grid(unaries, pairwise)
+    #result_qpbo = alpha_expansion_grid(unaries, pairwise)
+    #result_gc = cut_simple(unaries, pairwise)
+
+    # use the gerneral graph algorithm
+    # first, we construct the grid graph
+    inds = np.arange(x.size).reshape(x.shape)
+    horz = np.c_[inds[:, :-1].ravel(), inds[:, 1:].ravel()]
+    vert = np.c_[inds[:-1, :].ravel(), inds[1:, :].ravel()]
+    edges = np.vstack([horz, vert]).astype(np.int32)
+
+    # we flatten the unaries
+    result_graph = binary_graph(edges, unaries.reshape(-1, 2), pairwise)
 
     # plot results
     plt.subplot(231, title="original")
@@ -74,8 +84,8 @@ def example_binary():
     plt.imshow(x_thresh, interpolation='nearest')
     plt.subplot(235, title="qpbo")
     plt.imshow(result_qpbo, interpolation='nearest')
-    plt.subplot(236, title="graphcut")
-    plt.imshow(result_gc, interpolation='nearest')
+    plt.subplot(236, title="qpbo graph")
+    plt.imshow(result_graph.reshape(x.shape), interpolation='nearest')
     plt.show()
 
 
@@ -118,7 +128,7 @@ def example_multinomial_checkerboard():
     x[::2, ::2, 0] = -2
     x[1::2, 1::2, 1] = -2
     x[:, :, 2] = -1
-    x_noisy = x + np.random.normal(0, 0.5, size=x.shape)
+    x_noisy = x + np.random.normal(0, 1.0, size=x.shape)
     x_org = np.argmin(x, axis=2)
 
     # create unaries
@@ -129,18 +139,22 @@ def example_multinomial_checkerboard():
     pairwise = 100 * np.eye(3, dtype=np.int32)
 
     # do simple cut
-    result_qpbo = alpha_expansion_grid(unaries, pairwise, n_iter=3, improve=False)
+    result_qpbo = alpha_expansion_grid(unaries, pairwise, n_iter=3,
+            improve=False)
     energies = []
     for i, x in enumerate(result_qpbo):
         binarized = np.zeros(unaries.shape)
         gx, gy = np.ogrid[:unaries.shape[0], :unaries.shape[1]]
         binarized[gx, gy, x] = 1
-        vert = np.dot(binarized[1:, :].reshape(-1, 3).T, binarized[:-1, :].reshape(-1, 3))
-        horz = np.dot(binarized[:, 1:].reshape(-1, 3).T, binarized[:, :-1].reshape(-1, 3))
+        vert = np.dot(binarized[1:, :].reshape(-1, 3).T, binarized[:-1,
+            :].reshape(-1, 3))
+        horz = np.dot(binarized[:, 1:].reshape(-1, 3).T, binarized[:,
+            :-1].reshape(-1, 3))
         edges = vert + horz
         pw = np.sum(pairwise * edges)
         un = unaries[gx, gy, x].sum()
-        print("i: %d pairwise: %d, unaries: %d, sum: %d" % (i, pw, un, pw + un))
+        print("i: %d pairwise: %d, unaries: %d, sum: %d" % (i, pw, un, pw +
+            un))
         energies.append(pw + un)
         plt.matshow(x)
         plt.savefig("iter_%03d.png" % i)
@@ -157,8 +171,8 @@ def example_multinomial_checkerboard():
 
     plt.show()
 
-#example_binary()
+example_binary()
 #example_checkerboard()
 #example_multinomial()
-example_multinomial_checkerboard()
+#example_multinomial_checkerboard()
 #example_VH()

@@ -25,8 +25,52 @@ cdef extern from "QPBO.h":
         void ComputeWeakPersistencies()
         bool Improve()
 
+
+def binary_graph(np.ndarray[np.int32_t, ndim=2, mode='c'] edges,
+        np.ndarray[np.int32_t, ndim=2, mode='c'] data_cost,
+        np.ndarray[np.int32_t, ndim=2, mode='c'] smoothness_cost):
+    cdef int n_nodes = data_cost.shape[0]
+    if data_cost.shape[1] != 2:
+        raise ValueError("data_cost must be of shape (n_nodes, 2).")
+    if edges.shape[1] != 2:
+        raise ValueError("data_cost must be of shape (n_edges, 2).")
+    if smoothness_cost.shape[0] != smoothness_cost.shape[1]:
+        raise ValueError("smoothness_cost must be square matrix.")
+    cdef int n_edges = edges.shape[0] 
+    # create qpbo object
+    cdef QPBO[int] * q = new QPBO[int](n_nodes, n_edges)
+    q.AddNode(n_nodes)
+    cdef int* data_ptr = <int*> data_cost.data
+    # add unary terms
+    for i in xrange(n_nodes):
+        q.AddUnaryTerm(i, data_ptr[2 * i], data_ptr[2 * i + 1])
+    # add pairwise terms
+    # we have global terms
+    cdef int e00 = smoothness_cost[0, 0]
+    cdef int e10 = smoothness_cost[1, 0]
+    cdef int e01 = smoothness_cost[0, 1]
+    cdef int e11 = smoothness_cost[1, 1]
+
+    for e in edges:
+        q.AddPairwiseTerm(e[0], e[1], e00, e10, e01, e11)
+
+    q.Solve()
+    q.ComputeWeakPersistencies()
+
+    # get result
+    cdef np.npy_intp result_shape[1]
+    result_shape[0] = n_nodes
+    cdef np.ndarray[np.int32_t, ndim=1] result = np.PyArray_SimpleNew(1, result_shape, np.NPY_INT32)
+    cdef int * result_ptr = <int*>result.data
+    for i in xrange(n_nodes):
+        result_ptr[i] = q.GetLabel(i)
+
+    del q
+    return result
+
+
 def binary_grid(np.ndarray[np.int32_t, ndim=3, mode='c'] data_cost,
-        np.ndarray[np.int32_t, ndim=2, mode='c'] smoothness_cost, improve=True):
+        np.ndarray[np.int32_t, ndim=2, mode='c'] smoothness_cost):
     cdef int h = data_cost.shape[0]
     cdef int w = data_cost.shape[1]
     print("w: %d, h: %d" % (w, h))
@@ -70,9 +114,6 @@ def binary_grid(np.ndarray[np.int32_t, ndim=3, mode='c'] data_cost,
     for i in xrange(n_nodes):
         result_ptr[i] = q.GetLabel(i)
 
-    if improve:
-        for i in xrange(10):
-            print(q.Improve())
     del q
     return result
 
@@ -138,7 +179,7 @@ def binary_grid_VH(np.ndarray[np.int32_t, ndim=3, mode='c'] data_cost,
 
 
 def alpha_expansion_grid(np.ndarray[np.int32_t, ndim=3, mode='c'] data_cost,
-        np.ndarray[np.int32_t, ndim=2, mode='c'] smoothness_cost, int n_iter=5, improve=False):
+        np.ndarray[np.int32_t, ndim=2, mode='c'] smoothness_cost, int n_iter=5):
     cdef int h = data_cost.shape[0]
     cdef int w = data_cost.shape[1]
     cdef int n_labels =  data_cost.shape[2]
@@ -149,7 +190,6 @@ def alpha_expansion_grid(np.ndarray[np.int32_t, ndim=3, mode='c'] data_cost,
     cdef int label
     cdef int changes
     np.random.seed()
-    res = []
 
     # initial guess
     x = np.zeros((h, w), dtype=np.int32)
@@ -184,9 +224,6 @@ def alpha_expansion_grid(np.ndarray[np.int32_t, ndim=3, mode='c'] data_cost,
                         q.AddPairwiseTerm(node_id, node_id + 1, pair[0, 0], pair[0, 1], pair[1, 0], pair[1, 1])
             q.Solve()
             q.ComputeWeakPersistencies()
-            #if improve:
-                #for i in xrange(3):
-                    #print(q.Improve())
 
             changes = 0
             for i in xrange(n_nodes):
@@ -195,12 +232,10 @@ def alpha_expansion_grid(np.ndarray[np.int32_t, ndim=3, mode='c'] data_cost,
                 if label == 1:
                     x_ptr[i] = alpha
                     changes += 1
-                #print("node: %d, old label: %d, new label: %d, cut: %d" % (i, old_label, x_ptr[i], q.GetLabel(i)))
                 if label < 0:
                     print("LABEL <0 !!!")
             print("alpha: %d, changes: %d" % (alpha, changes))
             # compute energy:
             q.Reset()
-            res.append(x.copy())
     del q
-    return res
+    return x
