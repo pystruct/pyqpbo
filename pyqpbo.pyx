@@ -4,6 +4,9 @@ from libcpp cimport bool
 
 np.import_array()
 
+cdef extern from "stdlib.h":
+    void srand(unsigned int seed) 
+
 ctypedef int NodeId
 ctypedef int EdgeId
 
@@ -23,7 +26,7 @@ cdef extern from "QPBO.h":
         bool Improve()
 
 def binary_grid(np.ndarray[np.int32_t, ndim=3, mode='c'] data_cost,
-        np.ndarray[np.int32_t, ndim=2, mode='c'] smoothness_cost):
+        np.ndarray[np.int32_t, ndim=2, mode='c'] smoothness_cost, improve=True):
     cdef int h = data_cost.shape[0]
     cdef int w = data_cost.shape[1]
     print("w: %d, h: %d" % (w, h))
@@ -56,6 +59,7 @@ def binary_grid(np.ndarray[np.int32_t, ndim=3, mode='c'] data_cost,
                 q.AddPairwiseTerm(node_id, node_id + 1, e00, e10, e01, e11)
 
     q.Solve()
+    q.ComputeWeakPersistencies()
 
     # get result
     cdef np.npy_intp result_shape[2]
@@ -65,6 +69,11 @@ def binary_grid(np.ndarray[np.int32_t, ndim=3, mode='c'] data_cost,
     cdef int * result_ptr = <int*>result.data
     for i in xrange(n_nodes):
         result_ptr[i] = q.GetLabel(i)
+
+    if improve:
+        for i in xrange(10):
+            print(q.Improve())
+    del q
     return result
 
 
@@ -108,12 +117,12 @@ def binary_grid_VH(np.ndarray[np.int32_t, ndim=3, mode='c'] data_cost,
                 #down
                 vert_cost = V[i, j]
                 print("vert cost: %d" % vert_cost)
-                q.AddPairwiseTerm(node_id, node_id + w, vert_cost * e00, vert_cost * e10, vert_cost * e01, vert_cost * e11)
+                q.AddPairwiseTerm(node_id, node_id + w, vert_cost * e00, vert_cost * e01, vert_cost * e10, vert_cost * e11)
             if j < w - 1:
                 #right
                 horz_cost = H[i, j]
                 print("horz cost: %d" % horz_cost)
-                q.AddPairwiseTerm(node_id, node_id + 1, horz_cost * e00, horz_cost * e10, horz_cost * e01, horz_cost * e11)
+                q.AddPairwiseTerm(node_id, node_id + 1, horz_cost * e00, horz_cost * e01, horz_cost * e10, horz_cost * e11)
 
     q.Solve()
 
@@ -129,7 +138,7 @@ def binary_grid_VH(np.ndarray[np.int32_t, ndim=3, mode='c'] data_cost,
 
 
 def alpha_expansion_grid(np.ndarray[np.int32_t, ndim=3, mode='c'] data_cost,
-        np.ndarray[np.int32_t, ndim=2, mode='c'] smoothness_cost):
+        np.ndarray[np.int32_t, ndim=2, mode='c'] smoothness_cost, int n_iter=5, improve=False):
     cdef int h = data_cost.shape[0]
     cdef int w = data_cost.shape[1]
     cdef int n_labels =  data_cost.shape[2]
@@ -139,9 +148,8 @@ def alpha_expansion_grid(np.ndarray[np.int32_t, ndim=3, mode='c'] data_cost,
     cdef int old_label
     cdef int label
     cdef int changes
-
-    cdef n_iter = 5
     np.random.seed()
+    res = []
 
     # initial guess
     x = np.zeros((h, w), dtype=np.int32)
@@ -152,7 +160,7 @@ def alpha_expansion_grid(np.ndarray[np.int32_t, ndim=3, mode='c'] data_cost,
     # create qpbo object
     cdef QPBO[int] * q = new QPBO[int](n_nodes, n_edges)
     #cdef int* data_ptr = <int*> data_cost.data
-
+    srand(1)
     for n in xrange(n_iter):
         print("iteration: %d" % n)
         for alpha in np.random.permutation(n_labels):
@@ -166,20 +174,20 @@ def alpha_expansion_grid(np.ndarray[np.int32_t, ndim=3, mode='c'] data_cost,
                         q.AddUnaryTerm(node_id, data_cost[i, j, x[i, j]], 100000)
                     else:
                         q.AddUnaryTerm(node_id, data_cost[i, j, x[i, j]], data_cost[i, j, alpha])
-                    #print("added node %d, x[i,j]=%d, cost: %d %d" % (node_id, x[i,j], data_cost[i,j,x[i,j]], data_cost[i,j,alpha]))
                     if i < h - 1:
                         #down
-                        #print(x[i, j])
-                        #print(alpha)
                         pair = smoothness_cost[[x[i, j], alpha], :][:, [x[i + 1, j], alpha]]
-                        #print(pair)
-                        q.AddPairwiseTerm(node_id, node_id + w, pair[0, 0], pair[1, 0], pair[0, 1], pair[1, 1])
+                        q.AddPairwiseTerm(node_id, node_id + w, pair[0, 0], pair[0, 1], pair[1, 0], pair[1, 1])
                     if j < w - 1:
                         #right
                         pair = smoothness_cost[[x[i, j], alpha], :][:, [x[i, j + 1], alpha]]
-                        #print(pair)
-                        q.AddPairwiseTerm(node_id, node_id + 1, pair[0, 0], pair[1, 0], pair[0, 1], pair[1, 1])
+                        q.AddPairwiseTerm(node_id, node_id + 1, pair[0, 0], pair[0, 1], pair[1, 0], pair[1, 1])
             q.Solve()
+            q.ComputeWeakPersistencies()
+            #if improve:
+                #for i in xrange(3):
+                    #print(q.Improve())
+
             changes = 0
             for i in xrange(n_nodes):
                 old_label = x_ptr[i]
@@ -191,5 +199,8 @@ def alpha_expansion_grid(np.ndarray[np.int32_t, ndim=3, mode='c'] data_cost,
                 if label < 0:
                     print("LABEL <0 !!!")
             print("alpha: %d, changes: %d" % (alpha, changes))
+            # compute energy:
             q.Reset()
-    return x
+            res.append(x.copy())
+    del q
+    return res
