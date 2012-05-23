@@ -275,10 +275,12 @@ def alpha_expansion_graph(np.ndarray[np.int32_t, ndim=2, mode='c'] edges,
     cdef int label
     cdef int changes
     cdef int e00, e01, e10, e11
+    cdef int edge0, edge1
     np.random.seed()
 
     # initial guess
     x = np.zeros(n_nodes, dtype=np.int32)
+    cdef int* edge_ptr = <int*> edges.data
     cdef int* x_ptr = <int*> x.data
     cdef int* x_ptr_current
 
@@ -300,13 +302,15 @@ def alpha_expansion_graph(np.ndarray[np.int32_t, ndim=2, mode='c'] edges,
                     q.AddUnaryTerm(i, data_cost[i, x_ptr[i]], 100000)
                 else:
                     q.AddUnaryTerm(i, data_cost[i, x_ptr[i]], data_cost[i, alpha])
-            for e in edges:
+            for e in xrange(n_edges):
+                edge0 = edge_ptr[2 * e]
+                edge1 = edge_ptr[2 * e + 1]
                 #down
-                e00 = smoothness_cost[x_ptr[e[0]], x_ptr[e[1]]]
-                e01 = smoothness_cost[x_ptr[e[0]], alpha]
-                e10 = smoothness_cost[alpha, x_ptr[e[1]]]
+                e00 = smoothness_cost[x_ptr[edge0], x_ptr[edge1]]
+                e01 = smoothness_cost[x_ptr[edge0], alpha]
+                e10 = smoothness_cost[alpha, x_ptr[edge1]]
                 e11 = smoothness_cost[alpha, alpha]
-                q.AddPairwiseTerm(e[0], e[1], e00, e01, e10, e11)
+                q.AddPairwiseTerm(edge0, edge1, e00, e01, e10, e11)
 
             q.Solve()
             q.ComputeWeakPersistencies()
