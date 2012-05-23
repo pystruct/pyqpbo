@@ -185,7 +185,6 @@ def binary_grid_VH(np.ndarray[np.int32_t, ndim=3, mode='c'] data_cost,
         result_ptr[i] = q.GetLabel(i)
     return result
 
-
 def alpha_expansion_grid(np.ndarray[np.int32_t, ndim=3, mode='c'] data_cost,
         np.ndarray[np.int32_t, ndim=2, mode='c'] smoothness_cost, int n_iter=5):
     cdef int h = data_cost.shape[0]
@@ -197,6 +196,9 @@ def alpha_expansion_grid(np.ndarray[np.int32_t, ndim=3, mode='c'] data_cost,
     cdef int old_label
     cdef int label
     cdef int changes
+    cdef int node_id
+    cdef int node_label
+    cdef int e00, e01, e10, e11
     np.random.seed()
 
     # initial guess
@@ -218,18 +220,24 @@ def alpha_expansion_grid(np.ndarray[np.int32_t, ndim=3, mode='c'] data_cost,
                     node_id = i * w + j
                     # first state is "keep x", second is "switch to alpha"
                     # TODO: what if state is already alpha? Need to collapse?
+                    node_label = x[i, j]
                     if alpha == x[i, j]:
-                        q.AddUnaryTerm(node_id, data_cost[i, j, x[i, j]], 100000)
+                        q.AddUnaryTerm(node_id, data_cost[i, j, node_label], 100000)
                     else:
-                        q.AddUnaryTerm(node_id, data_cost[i, j, x[i, j]], data_cost[i, j, alpha])
+                        q.AddUnaryTerm(node_id, data_cost[i, j, node_label], data_cost[i, j, alpha])
+                    e01 = smoothness_cost[node_label, alpha]
+                    e11 = smoothness_cost[alpha, alpha]
                     if i < h - 1:
                         #down
-                        pair = smoothness_cost[[x[i, j], alpha], :][:, [x[i + 1, j], alpha]]
-                        q.AddPairwiseTerm(node_id, node_id + w, pair[0, 0], pair[0, 1], pair[1, 0], pair[1, 1])
+                        e00 = smoothness_cost[node_label, x[i + 1, j]]
+                        e10 = smoothness_cost[alpha, x[i + 1, j]]
+
+                        q.AddPairwiseTerm(node_id, node_id + w, e00, e01, e10, e11)
                     if j < w - 1:
                         #right
-                        pair = smoothness_cost[[x[i, j], alpha], :][:, [x[i, j + 1], alpha]]
-                        q.AddPairwiseTerm(node_id, node_id + 1, pair[0, 0], pair[0, 1], pair[1, 0], pair[1, 1])
+                        e00 = smoothness_cost[node_label, x[i, j + 1]]
+                        e10 = smoothness_cost[alpha, x[i, j + 1]]
+                        q.AddPairwiseTerm(node_id, node_id + 1, e00, e01, e10, e11)
             q.Solve()
             q.ComputeWeakPersistencies()
 
