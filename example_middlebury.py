@@ -25,13 +25,12 @@ def potts_example():
     unaries = (stereo_unaries(img1, img2) * 100).astype(np.int32)
     n_disps = unaries.shape[2]
 
-    newshape = unaries.shape[:2]
+    #newshape = unaries.shape[:2]
     potts_cut = alpha_expansion_grid(unaries, -5 * np.eye(n_disps,
-        dtype=np.int32))
+        dtype=np.int32), n_iter=5)
     x, y = np.ogrid[:n_disps, :n_disps]
     one_d_topology = np.abs(x - y).astype(np.int32).copy("C")
-
-    one_d_cut = alpha_expansion_grid(unaries, 5 * one_d_topology)
+    one_d_cut = alpha_expansion_grid(unaries, 5 * one_d_topology, n_iter=5)
     plt.subplot(231, xticks=(), yticks=())
     plt.imshow(img1)
     plt.subplot(232, xticks=(), yticks=())
@@ -39,9 +38,9 @@ def potts_example():
     plt.subplot(233, xticks=(), yticks=())
     plt.imshow(np.argmax(unaries, axis=2), interpolation='nearest')
     plt.subplot(223, xticks=(), yticks=())
-    plt.imshow(potts_cut.reshape(newshape), interpolation='nearest')
+    plt.imshow(potts_cut, interpolation='nearest')
     plt.subplot(224, xticks=(), yticks=())
-    plt.imshow(one_d_cut.reshape(newshape), interpolation='nearest')
+    plt.imshow(one_d_cut, interpolation='nearest')
     plt.show()
 
 potts_example()
