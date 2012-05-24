@@ -314,6 +314,9 @@ def alpha_expansion_graph(np.ndarray[np.int32_t, ndim=2, mode='c'] edges,
 
             q.Solve()
             q.ComputeWeakPersistencies()
+            improve = True
+            while improve:
+                improve = q.Improve()
 
             changes = 0
             for i in xrange(n_nodes):
