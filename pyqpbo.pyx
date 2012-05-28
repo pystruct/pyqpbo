@@ -220,6 +220,7 @@ def alpha_expansion_grid(np.ndarray[np.int32_t, ndim=3, mode='c'] data_cost,
     for n in xrange(n_iter):
         if verbose > 0:
             print("iteration: %d" % n)
+        changes = 0
         for alpha in np.random.permutation(n_labels):
             q.AddNode(n_nodes)
             for i in xrange(h):
@@ -253,7 +254,6 @@ def alpha_expansion_grid(np.ndarray[np.int32_t, ndim=3, mode='c'] data_cost,
             while improve:
                 improve = q.Improve()
 
-            changes = 0
             for i in xrange(n_nodes):
                 old_label = x_ptr[i]
                 label = q.GetLabel(i)
