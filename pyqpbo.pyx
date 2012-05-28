@@ -262,10 +262,11 @@ def alpha_expansion_grid(np.ndarray[np.int32_t, ndim=3, mode='c'] data_cost,
                     changes += 1
                 if label < 0:
                     print("LABEL <0 !!!")
-            if verbose > 0:
-                print("alpha: %d, changes: %d" % (alpha, changes))
-            # compute energy:
             q.Reset()
+        if verbose > 0:
+            print("alpha: %d, changes: %d" % (alpha, changes))
+        if changes == 0:
+            break
     del q
     return x
 
@@ -339,5 +340,7 @@ def alpha_expansion_graph(np.ndarray[np.int32_t, ndim=2, mode='c'] edges,
             q.Reset()
         if verbose > 0:
             print("changes: %d" % changes)
+        if changes == 0:
+            break
     del q
     return x
