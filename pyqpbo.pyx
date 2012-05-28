@@ -78,10 +78,11 @@ def binary_graph(np.ndarray[np.int32_t, ndim=2, mode='c'] edges,
 
 
 def binary_grid(np.ndarray[np.int32_t, ndim=3, mode='c'] data_cost,
-        np.ndarray[np.int32_t, ndim=2, mode='c'] smoothness_cost):
+        np.ndarray[np.int32_t, ndim=2, mode='c'] smoothness_cost, verbose=0):
     cdef int h = data_cost.shape[0]
     cdef int w = data_cost.shape[1]
-    print("w: %d, h: %d" % (w, h))
+    if verbose > 0:
+        print("w: %d, h: %d" % (w, h))
     if data_cost.shape[2] != 2:
         raise ValueError("data_cost must be of shape (h, w, 2).")
     cdef int n_nodes = w * h
@@ -186,7 +187,7 @@ def binary_grid_VH(np.ndarray[np.int32_t, ndim=3, mode='c'] data_cost,
     return result
 
 def alpha_expansion_grid(np.ndarray[np.int32_t, ndim=3, mode='c'] data_cost,
-        np.ndarray[np.int32_t, ndim=2, mode='c'] smoothness_cost, int n_iter=5):
+        np.ndarray[np.int32_t, ndim=2, mode='c'] smoothness_cost, int n_iter=3, verbose=0):
     cdef int h = data_cost.shape[0]
     cdef int w = data_cost.shape[1]
     cdef int n_labels =  data_cost.shape[2]
@@ -203,8 +204,9 @@ def alpha_expansion_grid(np.ndarray[np.int32_t, ndim=3, mode='c'] data_cost,
 
     # initial guess
     x = np.zeros((h, w), dtype=np.int32)
-    print("x shape: (%d, %d)" %(x.shape[0], x.shape[1]))
-    print("x size: %d" %x.size)
+    if verbose > 0:
+        print("x shape: (%d, %d)" %(x.shape[0], x.shape[1]))
+        print("x size: %d" %x.size)
     cdef int* x_ptr = <int*> x.data
     cdef int* x_ptr_current
 
@@ -216,7 +218,8 @@ def alpha_expansion_grid(np.ndarray[np.int32_t, ndim=3, mode='c'] data_cost,
     #cdef int* data_ptr = <int*> data_cost.data
     srand(1)
     for n in xrange(n_iter):
-        print("iteration: %d" % n)
+        if verbose > 0:
+            print("iteration: %d" % n)
         for alpha in np.random.permutation(n_labels):
             q.AddNode(n_nodes)
             for i in xrange(h):
@@ -246,6 +249,9 @@ def alpha_expansion_grid(np.ndarray[np.int32_t, ndim=3, mode='c'] data_cost,
                         q.AddPairwiseTerm(node_id, node_id + 1, e00, e01, e10, e11)
             q.Solve()
             q.ComputeWeakPersistencies()
+            improve = True
+            while improve:
+                improve = q.Improve()
 
             changes = 0
             for i in xrange(n_nodes):
@@ -256,7 +262,8 @@ def alpha_expansion_grid(np.ndarray[np.int32_t, ndim=3, mode='c'] data_cost,
                     changes += 1
                 if label < 0:
                     print("LABEL <0 !!!")
-            print("alpha: %d, changes: %d" % (alpha, changes))
+            if verbose > 0:
+                print("alpha: %d, changes: %d" % (alpha, changes))
             # compute energy:
             q.Reset()
     del q
@@ -265,7 +272,7 @@ def alpha_expansion_grid(np.ndarray[np.int32_t, ndim=3, mode='c'] data_cost,
 
 def alpha_expansion_graph(np.ndarray[np.int32_t, ndim=2, mode='c'] edges,
         np.ndarray[np.int32_t, ndim=2, mode='c'] data_cost,
-        np.ndarray[np.int32_t, ndim=2, mode='c'] smoothness_cost, int n_iter=5):
+        np.ndarray[np.int32_t, ndim=2, mode='c'] smoothness_cost, int n_iter=5, verbose=False):
 
     cdef int n_nodes = data_cost.shape[0]
     cdef int n_labels =  data_cost.shape[1]
@@ -292,7 +299,9 @@ def alpha_expansion_graph(np.ndarray[np.int32_t, ndim=2, mode='c'] edges,
     #cdef int* data_ptr = <int*> data_cost.data
     srand(1)
     for n in xrange(n_iter):
-        print("iteration: %d" % n)
+        if verbose > 0:
+            print("iteration: %d" % n)
+        changes = 0
         for alpha in np.random.permutation(n_labels):
             q.AddNode(n_nodes)
             for i in xrange(n_nodes):
@@ -318,7 +327,6 @@ def alpha_expansion_graph(np.ndarray[np.int32_t, ndim=2, mode='c'] edges,
             while improve:
                 improve = q.Improve()
 
-            changes = 0
             for i in xrange(n_nodes):
                 old_label = x_ptr[i]
                 label = q.GetLabel(i)
@@ -327,8 +335,9 @@ def alpha_expansion_graph(np.ndarray[np.int32_t, ndim=2, mode='c'] edges,
                     changes += 1
                 if label < 0:
                     print("LABEL <0 !!!")
-            print("alpha: %d, changes: %d" % (alpha, changes))
             # compute energy:
             q.Reset()
+        if verbose > 0:
+            print("changes: %d" % changes)
     del q
     return x
