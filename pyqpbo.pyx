@@ -9,6 +9,7 @@
 import numpy as np
 cimport numpy as np
 from libcpp cimport bool
+from time import time
 
 np.import_array()
 
@@ -186,8 +187,9 @@ def binary_grid_VH(np.ndarray[np.int32_t, ndim=3, mode='c'] data_cost,
         result_ptr[i] = q.GetLabel(i)
     return result
 
+
 def alpha_expansion_grid(np.ndarray[np.int32_t, ndim=3, mode='c'] data_cost,
-        np.ndarray[np.int32_t, ndim=2, mode='c'] smoothness_cost, int n_iter=3, verbose=0):
+        np.ndarray[np.int32_t, ndim=2, mode='c'] smoothness_cost, int n_iter=3, verbose=0, random_seed=None):
     cdef int h = data_cost.shape[0]
     cdef int w = data_cost.shape[1]
     cdef int n_labels =  data_cost.shape[2]
@@ -200,7 +202,13 @@ def alpha_expansion_grid(np.ndarray[np.int32_t, ndim=3, mode='c'] data_cost,
     cdef int node_id
     cdef int node_label
     cdef int e00, e01, e10, e11
-    np.random.seed()
+
+    if random_seed is None:
+        rnd_state = np.random.mtrand.RandomState()
+        srand(time())
+    else:
+        rnd_state = np.random.mtrand.RandomState(random_seed)
+        srand(random_seed)
 
     # initial guess
     x = np.zeros((h, w), dtype=np.int32)
@@ -216,12 +224,11 @@ def alpha_expansion_grid(np.ndarray[np.int32_t, ndim=3, mode='c'] data_cost,
     # create qpbo object
     cdef QPBO[int] * q = new QPBO[int](n_nodes, n_edges)
     #cdef int* data_ptr = <int*> data_cost.data
-    srand(1)
     for n in xrange(n_iter):
         if verbose > 0:
             print("iteration: %d" % n)
         changes = 0
-        for alpha in np.random.permutation(n_labels):
+        for alpha in rnd_state.permutation(n_labels):
             q.AddNode(n_nodes)
             for i in xrange(h):
                 for j in xrange(w):
@@ -273,7 +280,7 @@ def alpha_expansion_grid(np.ndarray[np.int32_t, ndim=3, mode='c'] data_cost,
 
 def alpha_expansion_graph(np.ndarray[np.int32_t, ndim=2, mode='c'] edges,
         np.ndarray[np.int32_t, ndim=2, mode='c'] data_cost,
-        np.ndarray[np.int32_t, ndim=2, mode='c'] smoothness_cost, int n_iter=5, verbose=False):
+        np.ndarray[np.int32_t, ndim=2, mode='c'] smoothness_cost, int n_iter=5, verbose=False, random_seed=None):
 
     cdef int n_nodes = data_cost.shape[0]
     cdef int n_labels =  data_cost.shape[1]
@@ -284,7 +291,13 @@ def alpha_expansion_graph(np.ndarray[np.int32_t, ndim=2, mode='c'] edges,
     cdef int changes
     cdef int e00, e01, e10, e11
     cdef int edge0, edge1
-    np.random.seed()
+
+    if random_seed is None:
+        rnd_state = np.random.mtrand.RandomState()
+        srand(time())
+    else:
+        rnd_state = np.random.mtrand.RandomState(random_seed)
+        srand(random_seed)
 
     # initial guess
     x = np.zeros(n_nodes, dtype=np.int32)
@@ -298,12 +311,11 @@ def alpha_expansion_graph(np.ndarray[np.int32_t, ndim=2, mode='c'] edges,
     # create qpbo object
     cdef QPBO[int] * q = new QPBO[int](n_nodes, n_edges)
     #cdef int* data_ptr = <int*> data_cost.data
-    srand(1)
     for n in xrange(n_iter):
         if verbose > 0:
             print("iteration: %d" % n)
         changes = 0
-        for alpha in np.random.permutation(n_labels):
+        for alpha in rnd_state.permutation(n_labels):
             q.AddNode(n_nodes)
             for i in xrange(n_nodes):
                 # first state is "keep x", second is "switch to alpha"
