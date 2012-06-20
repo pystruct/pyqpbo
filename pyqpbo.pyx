@@ -45,6 +45,8 @@ def binary_graph(np.ndarray[np.int32_t, ndim=2, mode='c'] edges,
         raise ValueError("unary_cost must be of shape (n_edges, 2).")
     if pairwise_cost.shape[0] != pairwise_cost.shape[1]:
         raise ValueError("pairwise_cost must be square matrix.")
+    if (pairwise_cost != pairwise_cost.T).any():
+        raise ValueError("pairwise_cost must be symmetric.")
     cdef int n_edges = edges.shape[0] 
     # create qpbo object
     cdef QPBO[int] * q = new QPBO[int](n_nodes, n_edges)
@@ -86,6 +88,8 @@ def binary_grid(np.ndarray[np.int32_t, ndim=3, mode='c'] unary_cost,
         print("w: %d, h: %d" % (w, h))
     if unary_cost.shape[2] != 2:
         raise ValueError("unary_cost must be of shape (h, w, 2).")
+    if (pairwise_cost != pairwise_cost.T).any():
+        raise ValueError("pairwise_cost must be symmetric.")
     cdef int n_nodes = w * h
     cdef int n_edges = (w - 1) * h + (h - 1) * w
     # create qpbo object
@@ -203,6 +207,8 @@ def alpha_expansion_grid(np.ndarray[np.int32_t, ndim=3, mode='c'] unary_cost,
     cdef int node_label
     cdef int e00, e01, e10, e11
 
+    if (pairwise_cost != pairwise_cost.T).any():
+        raise ValueError("pairwise_cost must be symmetric.")
     if random_seed is None:
         rnd_state = np.random.mtrand.RandomState()
         srand(time())
@@ -292,6 +298,8 @@ def alpha_expansion_graph(np.ndarray[np.int32_t, ndim=2, mode='c'] edges,
     cdef int e00, e01, e10, e11
     cdef int edge0, edge1
 
+    if (pairwise_cost != pairwise_cost.T).any():
+        raise ValueError("pairwise_cost must be symmetric.")
     if random_seed is None:
         rnd_state = np.random.mtrand.RandomState()
         srand(time())
