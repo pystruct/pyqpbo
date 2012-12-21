@@ -506,3 +506,122 @@ def alpha_expansion_graph(np.ndarray[np.int32_t, ndim=2, mode='c'] edges,
             break
     del q
     return x
+
+
+def alpha_expansion_general_graph(
+        np.ndarray[np.int32_t, ndim=2, mode='c'] edges,
+        np.ndarray[np.int32_t, ndim=2, mode='c'] unary_cost,
+        np.ndarray[np.int32_t, ndim=3, mode='c'] edge_costs,
+        int n_iter=5, verbose=False, random_seed=None):
+    """Alpha expansion using QPBO inference on general graph.
+    
+    Pairwise potentials can be arbitrary, given by edge_costs.
+    For the i'th edge in ``edges`` the cost of connecting labels
+    y_1 and y_2 is given by ``edge_costs[i, y_1, y_2]``.
+
+    Alpha expansion is very efficient but inference is only approximate and
+    none of the persistence properties of QPBO are preserved.
+
+    Parameters
+    ----------
+    edges : nd-array, shape=(n_edges, 2)
+        Edge-list describing the graph. Edges are given
+        using node-indices from 0 to n_nodes-1.
+
+    unary_cost : nd-array, shape=(n_nodes, n_states)
+        Unary potential costs.
+
+    edges_cost : nd-array, shape=(n_edges, n_states, n_states)
+        Symmetric pairwise potential.
+
+    n_iter : int, default=5
+        Number of expansion iterations (how often to go over labels).
+
+    verbose : int, default=0
+        Verbosity.
+
+    random_seed: int or None
+        If int, a fixed random seed is used for reproducable results.
+
+    Returns
+    -------
+    result : nd-array, shape=(n_nodes,)
+        Approximate MAP as inferred by QPBO.
+        Values are 0, 1 and -1 for non-assigned nodes.
+
+    """
+
+    cdef int n_nodes = unary_cost.shape[0]
+    cdef int n_labels =  unary_cost.shape[1]
+    cdef int n_edges = edges.shape[0]
+    cdef np.ndarray[np.int32_t, ndim=1] x
+    cdef int old_label
+    cdef int label
+    cdef int changes
+    cdef int e00, e01, e10, e11
+    cdef int edge0, edge1
+
+    if random_seed is None:
+        rnd_state = np.random.mtrand.RandomState()
+        srand(time())
+    else:
+        rnd_state = np.random.mtrand.RandomState(random_seed)
+        srand(random_seed)
+
+    # initial guess
+    x = np.zeros(n_nodes, dtype=np.int32)
+    cdef int* edge_ptr = <int*> edges.data
+    cdef int* x_ptr = <int*> x.data
+    cdef int* x_ptr_current
+
+    cdef int* data_ptr = <int*> unary_cost.data
+    cdef int* data_ptr_current
+
+    # create qpbo object
+    cdef QPBO[int] * q = new QPBO[int](n_nodes, n_edges)
+    #cdef int* data_ptr = <int*> unary_cost.data
+    for n in xrange(n_iter):
+        if verbose > 0:
+            print("iteration: %d" % n)
+        changes = 0
+        for alpha in rnd_state.permutation(n_labels):
+            q.AddNode(n_nodes)
+            for i in xrange(n_nodes):
+                # first state is "keep x", second is "switch to alpha"
+                # TODO: what if state is already alpha? Need to collapse?
+                if alpha == x[i]:
+                    q.AddUnaryTerm(i, unary_cost[i, x_ptr[i]], 100000)
+                else:
+                    q.AddUnaryTerm(i, unary_cost[i, x_ptr[i]], unary_cost[i, alpha])
+            for e in xrange(n_edges):
+                edge0 = edge_ptr[2 * e]
+                edge1 = edge_ptr[2 * e + 1]
+                #down
+                e00 = edge_costs[e, x_ptr[edge0], x_ptr[edge1]]
+                e01 = edge_costs[e, x_ptr[edge0], alpha]
+                e10 = edge_costs[e, alpha, x_ptr[edge1]]
+                e11 = edge_costs[e, alpha, alpha]
+                q.AddPairwiseTerm(edge0, edge1, e00, e01, e10, e11)
+
+            q.Solve()
+            q.ComputeWeakPersistencies()
+            improve = True
+            while improve:
+                improve = q.Improve()
+
+            for i in xrange(n_nodes):
+                old_label = x_ptr[i]
+                label = q.GetLabel(i)
+                if label == 1:
+                    x_ptr[i] = alpha
+                    changes += 1
+                if label < 0:
+                    print("LABEL <0 !!!")
+            # compute energy:
+            q.Reset()
+        if verbose > 0:
+            print("changes: %d" % changes)
+        if changes == 0:
+            break
+    del q
+    return x
