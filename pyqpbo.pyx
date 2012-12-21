@@ -36,13 +36,37 @@ cdef extern from "QPBO.h":
 
 
 def binary_graph(np.ndarray[np.int32_t, ndim=2, mode='c'] edges,
-        np.ndarray[np.int32_t, ndim=2, mode='c'] unary_cost,
-        np.ndarray[np.int32_t, ndim=2, mode='c'] pairwise_cost):
+                 np.ndarray[np.int32_t, ndim=2, mode='c'] unary_cost,
+                 np.ndarray[np.int32_t, ndim=2, mode='c'] pairwise_cost):
+    """QPBO inference on a graph with binary variables.
+    
+    Pairwise potentials are the same for all edges.
+
+    Parameters
+    ----------
+    edges : nd-array, shape=(n_edges, 2)
+        Edge-list describing the graph. Edges are given
+        using node-indices from 0 to n_nodes-1.
+
+    unary_cost : nd-array, shape=(n_nodes, 2)
+        Unary potential costs. Rows correspond to rows, columns
+        to states.
+    
+    pairwise_cost : nd-array, shape=(2, 2)
+        Symmetric pairwise potential.
+
+    Returns
+    -------
+    result : nd-array, shape=(n_nodes,)
+        Approximate MAP as inferred by QPBO.
+        Values are 0, 1 and -1 for non-assigned nodes.
+
+    """
     cdef int n_nodes = unary_cost.shape[0]
     if unary_cost.shape[1] != 2:
         raise ValueError("unary_cost must be of shape (n_nodes, 2).")
     if edges.shape[1] != 2:
-        raise ValueError("unary_cost must be of shape (n_edges, 2).")
+        raise ValueError("edges must be of shape (n_edges, 2).")
     if pairwise_cost.shape[0] != pairwise_cost.shape[1]:
         raise ValueError("pairwise_cost must be square matrix.")
     if (pairwise_cost != pairwise_cost.T).any():
@@ -81,7 +105,28 @@ def binary_graph(np.ndarray[np.int32_t, ndim=2, mode='c'] edges,
 
 
 def binary_grid(np.ndarray[np.int32_t, ndim=3, mode='c'] unary_cost,
-        np.ndarray[np.int32_t, ndim=2, mode='c'] pairwise_cost, verbose=0):
+                np.ndarray[np.int32_t, ndim=2, mode='c'] pairwise_cost,
+                verbose=0):
+    """QPBO inference on a 2d grid with binary variables.
+    
+    Pairwise potentials are the same for all edges.
+
+    Parameters
+    ----------
+    unary_cost : nd-array, shape=(height, width, 2)
+        Unary potential costs. First two dimensions correspond to
+        position in the grid, the last dimension corresponds to states.
+
+    pairwise_cost : nd-array, shape=(2, 2)
+        Symmetric pairwise potential.
+
+    Returns
+    -------
+    result : nd-array, shape=(height, width)
+        Approximate MAP as inferred by QPBO.
+        Values are 0, 1 and -1 for non-assigned nodes.
+
+    """
     cdef int h = unary_cost.shape[0]
     cdef int w = unary_cost.shape[1]
     if verbose > 0:
@@ -133,9 +178,36 @@ def binary_grid(np.ndarray[np.int32_t, ndim=3, mode='c'] unary_cost,
 
 
 def binary_grid_VH(np.ndarray[np.int32_t, ndim=3, mode='c'] unary_cost,
-        np.ndarray[np.int32_t, ndim=2, mode='c'] pairwise_cost,
-        np.ndarray[np.int32_t, ndim=2, mode='c'] V,
-        np.ndarray[np.int32_t, ndim=2, mode='c'] H):
+                   np.ndarray[np.int32_t, ndim=2, mode='c'] pairwise_cost,
+                   np.ndarray[np.int32_t, ndim=2, mode='c'] V,
+                   np.ndarray[np.int32_t, ndim=2, mode='c'] H):
+    """QPBO inference on a 2d grid with binary variables.
+    
+    Pairwise potentials can be multiplicatively modified for each edge.
+    This allows for effects like respecting edges in images.
+
+    Parameters
+    ----------
+    unary_cost : nd-array, shape=(height, width, 2)
+        Unary potential costs. First two dimensions correspond to
+        position in the grid, the last dimension corresponds to states.
+
+    pairwise_cost : nd-array, shape=(2, 2)
+        Symmetric pairwise potential.
+
+    V : nd-array, shape=(height - 1, width)
+        Multiplicative modification of pairwise costs for vertical edges.
+
+    H : nd-array, shape=(height, width - 1)
+        Multiplicative modification of pairwise costs for horizontal edges.
+
+    Returns
+    -------
+    result : nd-array, shape=(height, width)
+        Approximate MAP as inferred by QPBO.
+        Values are 0, 1 and -1 for non-assigned nodes.
+
+    """
 
     cdef int h = unary_cost.shape[0]
     cdef int w = unary_cost.shape[1]
@@ -193,7 +265,40 @@ def binary_grid_VH(np.ndarray[np.int32_t, ndim=3, mode='c'] unary_cost,
 
 
 def alpha_expansion_grid(np.ndarray[np.int32_t, ndim=3, mode='c'] unary_cost,
-        np.ndarray[np.int32_t, ndim=2, mode='c'] pairwise_cost, int n_iter=3, verbose=0, random_seed=None):
+                         np.ndarray[np.int32_t, ndim=2, mode='c']
+                         pairwise_cost, int n_iter=3, verbose=0,
+                         random_seed=None):
+    """Alpha expansion using QPBO inference on a 2d grid.
+    
+    Pairwise potentials are the same for all edges.
+    Alpha expansion is very efficient but inference is only approximate and
+    none of the persistence properties of QPBO are preserved.
+
+    Parameters
+    ----------
+    unary_cost : nd-array, shape=(height, width, n_states)
+        Unary potential costs. First two dimensions correspond to
+        position in the grid, the last dimension corresponds to states.
+
+    pairwise_cost : nd-array, shape=(n_states, n_states)
+        Symmetric pairwise potential.
+
+    n_iter : int, default=3
+        Number of expansion iterations (how often to go over labels).
+
+    verbose : int, default=0
+        Verbosity.
+
+    random_seed: int or None
+        If int, a fixed random seed is used for reproducable results.
+
+    Returns
+    -------
+    result : nd-array, shape=(height, width)
+        Approximate MAP as inferred by QPBO.
+        Values are 0, 1 and -1 for non-assigned nodes.
+
+    """
     cdef int h = unary_cost.shape[0]
     cdef int w = unary_cost.shape[1]
     cdef int n_labels =  unary_cost.shape[2]
@@ -285,8 +390,45 @@ def alpha_expansion_grid(np.ndarray[np.int32_t, ndim=3, mode='c'] unary_cost,
 
 
 def alpha_expansion_graph(np.ndarray[np.int32_t, ndim=2, mode='c'] edges,
-        np.ndarray[np.int32_t, ndim=2, mode='c'] unary_cost,
-        np.ndarray[np.int32_t, ndim=2, mode='c'] pairwise_cost, int n_iter=5, verbose=False, random_seed=None):
+                          np.ndarray[np.int32_t, ndim=2, mode='c'] unary_cost,
+                          np.ndarray[np.int32_t, ndim=2, mode='c']
+                          pairwise_cost, int n_iter=5, verbose=False,
+                          random_seed=None):
+    """Alpha expansion using QPBO inference on general graph.
+    
+    Pairwise potentials are the same for all edges.
+
+    Alpha expansion is very efficient but inference is only approximate and
+    none of the persistence properties of QPBO are preserved.
+
+    Parameters
+    ----------
+    edges : nd-array, shape=(n_edges, 2)
+        Edge-list describing the graph. Edges are given
+        using node-indices from 0 to n_nodes-1.
+
+    unary_cost : nd-array, shape=(n_nodes, n_states)
+        Unary potential costs.
+
+    pairwise_cost : nd-array, shape=(n_states, n_states)
+        Symmetric pairwise potential.
+
+    n_iter : int, default=5
+        Number of expansion iterations (how often to go over labels).
+
+    verbose : int, default=0
+        Verbosity.
+
+    random_seed: int or None
+        If int, a fixed random seed is used for reproducable results.
+
+    Returns
+    -------
+    result : nd-array, shape=(n_nodes,)
+        Approximate MAP as inferred by QPBO.
+        Values are 0, 1 and -1 for non-assigned nodes.
+
+    """
 
     cdef int n_nodes = unary_cost.shape[0]
     cdef int n_labels =  unary_cost.shape[1]
