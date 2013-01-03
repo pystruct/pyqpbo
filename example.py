@@ -149,7 +149,7 @@ def example_multinomial_checkerboard():
     vert = np.c_[inds[:-1, :].ravel(), inds[1:, :].ravel()]
     edges = np.vstack([horz, vert]).astype(np.int32)
     result_qpbo_graph = alpha_expansion_graph(edges, unaries.reshape(-1, 3),
-            pairwise, n_iter=4)
+                                              pairwise, n_iter=4)
 
     # plot results
     plt.subplot(221, title="original")
@@ -165,6 +165,6 @@ def example_multinomial_checkerboard():
 
 #example_binary()
 #example_checkerboard()
-#example_multinomial()
+example_multinomial()
 example_multinomial_checkerboard()
 #example_VH()
