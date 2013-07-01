@@ -1,10 +1,19 @@
 import os
+import tarfile
 from distutils.core import setup
 from distutils.extension import Extension
 from Cython.Distutils import build_ext
 import numpy as np
+import urllib
 
-qpbo_directory = "qpbo_src"
+# fetch and unpack the archive. Not the nicest way...
+
+urllib.urlretrieve("http://pub.ist.ac.at/~vnk/software/QPBO-v1.3.src.tar.gz",
+                   "QPBO-v1.3.src.tar.gz")
+tfile = tarfile.open("QPBO-v1.3.src.tar.gz", 'r:gz')
+tfile.extractall('.')
+
+qpbo_directory = "QPBO-v1.3.src"
 
 files = ["QPBO.cpp", "QPBO_extra.cpp", "QPBO_maxflow.cpp",
          "QPBO_postprocessing.cpp"]
