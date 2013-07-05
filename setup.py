@@ -1,8 +1,8 @@
 import os
 import tarfile
-from setuptools import setup
+from distutils.core import setup
 from distutils.extension import Extension
-from Cython.Distutils import build_ext
+from Cython.Build import cythonize
 import numpy as np
 import urllib
 
@@ -19,11 +19,13 @@ files = ["QPBO.cpp", "QPBO_extra.cpp", "QPBO_maxflow.cpp",
          "QPBO_postprocessing.cpp"]
 
 files = [os.path.join(qpbo_directory, f) for f in files]
-files.insert(0, "pyqpbo.pyx")
+#files.insert(0, "pyqpbo.pyx")
 
-setup(cmdclass={'build_ext': build_ext},
-      install_requires=['Cython'],
-      ext_modules=[Extension("pyqpbo", files, language="c++",
-                             include_dirs=[qpbo_directory, np.get_include()],
-                             library_dirs=[qpbo_directory],
-                             extra_compile_args=["-fpermissive"])])
+extensions = Extension('pyqpbo', 
+                       ['pyqpbo.pyx'], 
+                       language='c++', 
+                       include_dirs=[qpbo_directory, np.get_include()],
+                       library_dirs=[qpbo_directory],
+                       extra_compile_args=["-fpermissive"])
+
+setup(ext_modules = cythonize([extensions]))
