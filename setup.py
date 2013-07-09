@@ -22,4 +22,12 @@ extensions = Extension('pyqpbo',
                        library_dirs=[qpbo_directory],
                        extra_compile_args=["-fpermissive"])
 
-setup(ext_modules = cythonize([extensions]))
+#setup(ext_modules = cythonize([extensions]))
+
+setup(ext_modules = [Extension('pyqpbo', 
+                               ['pyqpbo.cpp'],
+                               language='c++',                        
+                               include_dirs=[qpbo_directory, 
+                                             np.get_include()],
+                               library_dirs=[qpbo_directory],
+                               extra_compile_args=["-fpermissive"])])
