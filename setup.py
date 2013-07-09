@@ -15,12 +15,6 @@ tfile.extractall('.')
 
 qpbo_directory = "QPBO-v1.3.src"
 
-files = ["QPBO.cpp", "QPBO_extra.cpp", "QPBO_maxflow.cpp",
-         "QPBO_postprocessing.cpp"]
-
-files = [os.path.join(qpbo_directory, f) for f in files]
-#files.insert(0, "pyqpbo.pyx")
-
 extensions = Extension('pyqpbo', 
                        ['pyqpbo.pyx'], 
                        language='c++', 
