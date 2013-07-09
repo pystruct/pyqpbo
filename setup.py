@@ -17,8 +17,8 @@ qpbo_directory = "QPBO-v1.3.src"
 setup(name = 'pyqpbo',
       ext_modules = [Extension('pyqpbo.pyqpbo', 
                                sources = ['pyqpbo.cpp'],
-                               #language='c++',                        
+                               language='c++',                        
                                include_dirs=[qpbo_directory, 
                                              np.get_include()],
                                library_dirs=[qpbo_directory],
-                               extra_compile_args=["-std=c++0x", "-fpermissive"])])
+                               extra_compile_args=["-fpermissive"])])
