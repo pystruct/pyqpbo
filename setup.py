@@ -14,7 +14,8 @@ tfile.extractall('.')
 
 qpbo_directory = "QPBO-v1.3.src"
 
-setup(ext_modules = [Extension('pyqpbo', 
+setup(name = 'pyqpbo',
+      ext_modules = [Extension('pyqpbo.pyqpbo', 
                                sources = ['pyqpbo.cpp'],
                                language='c++',                        
                                include_dirs=[qpbo_directory, 
