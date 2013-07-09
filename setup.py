@@ -1,6 +1,6 @@
 import os
 import tarfile
-from distutils.core import distutils_setup
+from distutils.core import setup
 from distutils.extension import Extension
 from Cython.Build import cythonize
 import numpy as np
@@ -22,4 +22,4 @@ extensions = Extension('pyqpbo',
                        library_dirs=[qpbo_directory],
                        extra_compile_args=["-fpermissive"])
 
-distutils_setup(ext_modules = cythonize([extensions]))
+setup(ext_modules = cythonize([extensions]))
