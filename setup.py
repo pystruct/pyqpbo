@@ -1,7 +1,7 @@
 import os
 import tarfile
-from distutils.core import d_setup
-from distutils.extension import d_Extension
+from distutils.core import setup
+from distutils.extension import Extension
 import numpy as np
 import urllib
 
@@ -14,7 +14,7 @@ tfile.extractall('.')
 
 qpbo_directory = "QPBO-v1.3.src"
 
-d_setup(ext_modules = [d_Extension('pyqpbo', 
+setup(ext_modules = [Extension('pyqpbo', 
                                sources = ['pyqpbo.cpp'],
                                language='c++',                        
                                include_dirs=[qpbo_directory, 
