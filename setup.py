@@ -1,3 +1,4 @@
+import os
 import tarfile
 from setuptools import setup, Extension
 import numpy as np
@@ -12,9 +13,12 @@ tfile.extractall('.')
 
 qpbo_directory = "QPBO-v1.3.src"
 
-setup(name='pyqpbo',
-      ext_modules=[Extension('pyqpbo.pyqpbo', sources=['src/pyqpbo.cpp'],
-                             language='c++', include_dirs=[qpbo_directory,
-                                                           np.get_include()],
-                             library_dirs=[qpbo_directory],
-                             extra_compile_args=["-fpermissive"])])
+setup(name = 'pyqpbo',
+      packages = ['pyqpbo'],
+      ext_modules = [Extension('pyqpbo.pyqpbo', 
+                               sources = ['src/pyqpbo.cpp'],
+                               language='c++',                        
+                               include_dirs=[qpbo_directory, 
+                                             np.get_include()],
+                               library_dirs=[qpbo_directory],
+                               extra_compile_args=["-fpermissive"])])
