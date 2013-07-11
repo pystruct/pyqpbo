@@ -13,10 +13,16 @@ tfile.extractall('.')
 
 qpbo_directory = "QPBO-v1.3.src"
 
+files = ["QPBO.cpp", "QPBO_extra.cpp", "QPBO_maxflow.cpp",
+         "QPBO_postprocessing.cpp"]
+
+files = [os.path.join(qpbo_directory, f) for f in files]
+files.insert(0, "src/pyqpbo.cpp")
+
 setup(name = 'pyqpbo',
       packages = ['pyqpbo'],
       ext_modules = [Extension('pyqpbo.pyqpbo', 
-                               sources = ['src/pyqpbo.cpp'],
+                               sources = files,
                                language='c++',                        
                                include_dirs=[qpbo_directory, 
                                              np.get_include()],
