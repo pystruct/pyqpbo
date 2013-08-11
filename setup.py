@@ -19,12 +19,14 @@ files = ["QPBO.cpp", "QPBO_extra.cpp", "QPBO_maxflow.cpp",
 files = [os.path.join(qpbo_directory, f) for f in files]
 files.insert(0, "src/pyqpbo.cpp")
 
-setup(name = 'pyqpbo',
-      packages = ['pyqpbo'],
-      ext_modules = [Extension('pyqpbo.pyqpbo', 
-                               sources = files,
-                               language='c++',                        
-                               include_dirs=[qpbo_directory, 
-                                             np.get_include()],
-                               library_dirs=[qpbo_directory],
-                               extra_compile_args=["-fpermissive"])])
+setup(name='pyqpbo',
+      packages=['pyqpbo'],
+      version="0.1",
+      author="Andreas Mueller",
+      author_email="t3kcit@gmail.com",
+      url="http://pystruct.github.io",
+      ext_modules=[
+          Extension('pyqpbo.pyqpbo', sources=files, language='c++',
+                    include_dirs=[qpbo_directory, np.get_include()],
+                    library_dirs=[qpbo_directory],
+                    extra_compile_args=["-fpermissive"])])
