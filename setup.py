@@ -9,7 +9,7 @@ import urllib
 class QPBOInstall(build_ext):
     def run(self):
         # locate urlretrieve: with Python3, this has been moved to urllib.request
-        urlretrieve = urllib.urlretrieve if hasattr(urllib, "urlretrieve")
+        urlretrieve = urllib.urlretrieve if hasattr(urllib, "urlretrieve") \
                                          else urllib.request.urlretrieve
         # fetch and unpack the archive. Not the nicest way...
         urlretrieve("http://pub.ist.ac.at/~vnk/software/QPBO-v1.3.src.tar.gz",
