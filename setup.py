@@ -8,8 +8,11 @@ import urllib
 
 class QPBOInstall(build_ext):
     def run(self):
+        # locate urlretrieve: with Python3, this has been moved to urllib.request
+        urlretrieve = urllib.urlretrieve if hasattr(urllib, "urlretrieve") \
+                                         else urllib.request.urlretrieve
         # fetch and unpack the archive. Not the nicest way...
-        urllib.urlretrieve("http://pub.ist.ac.at/~vnk/software/QPBO-v1.3.src.tar.gz",
+        urlretrieve("http://pub.ist.ac.at/~vnk/software/QPBO-v1.3.src.tar.gz",
                            "QPBO-v1.3.src.tar.gz")
         tfile = tarfile.open("QPBO-v1.3.src.tar.gz", 'r:gz')
         tfile.extractall('.')
@@ -31,6 +34,7 @@ setup(name='pyqpbo',
       author_email="t3kcit@gmail.com",
       url="http://pystruct.github.io",
       cmdclass={"build_ext": QPBOInstall},
+      use_2to3 = True,
       ext_modules=[
           Extension('pyqpbo.pyqpbo', sources=files, language='c++',
                     include_dirs=[qpbo_directory, np.get_include()],
