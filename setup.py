@@ -4,6 +4,7 @@ from distutils.core import setup, Extension
 from distutils.command.build_ext import build_ext
 import numpy as np
 import urllib
+import urllib.request
 
 
 class QPBOInstall(build_ext):
