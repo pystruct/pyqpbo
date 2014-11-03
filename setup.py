@@ -3,17 +3,20 @@ import tarfile
 from distutils.core import setup, Extension
 from distutils.command.build_ext import build_ext
 import numpy as np
-import urllib
 
 
 class QPBOInstall(build_ext):
     def run(self):
         # locate urlretrieve: with Python3, this has been moved to urllib.request
-        urlretrieve = urllib.urlretrieve if hasattr(urllib, "urlretrieve") \
-                                         else urllib.request.urlretrieve
-        # fetch and unpack the archive. Not the nicest way...
+        import urllib
+        if hasattr(urllib, "urlretrieve"):
+            urlretrieve = urllib.urlretrieve
+        else:
+            import urllib.request
+            urlretrieve = urllib.request.urlretrieve
+            # fetch and unpack the archive. Not the nicest way...
         urlretrieve("http://pub.ist.ac.at/~vnk/software/QPBO-v1.3.src.tar.gz",
-                           "QPBO-v1.3.src.tar.gz")
+                    "QPBO-v1.3.src.tar.gz")
         tfile = tarfile.open("QPBO-v1.3.src.tar.gz", 'r:gz')
         tfile.extractall('.')
         build_ext.run(self)
