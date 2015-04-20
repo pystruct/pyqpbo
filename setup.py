@@ -32,13 +32,12 @@ files.insert(0, "src/pyqpbo.cpp")
 
 setup(name='pyqpbo',
       packages=['pyqpbo'],
-      version="0.1",
+      version="0.1.2",
       author="Andreas Mueller",
       author_email="t3kcit@gmail.com",
       description='QPBO interface and alpha expansion for Python',
       url="http://pystruct.github.io",
       cmdclass={"build_ext": QPBOInstall},
-      use_2to3 = True,
       ext_modules=[
           Extension('pyqpbo.pyqpbo', sources=files, language='c++',
                     include_dirs=[qpbo_directory, np.get_include()],
