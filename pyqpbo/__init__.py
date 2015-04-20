@@ -1,1 +1,1 @@
-from pyqpbo import *
+from .pyqpbo import *
