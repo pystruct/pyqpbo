@@ -15,7 +15,7 @@ class QPBOInstall(build_ext):
             import urllib.request
             urlretrieve = urllib.request.urlretrieve
             # fetch and unpack the archive. Not the nicest way...
-        urlretrieve("http://pub.ist.ac.at/~vnk/software/QPBO-v1.3.src.tar.gz",
+        urlretrieve("https://nanonets.s3.us-west-2.amazonaws.com/QPBO-v1.3.src.tar.gz",
                     "QPBO-v1.3.src.tar.gz")
         tfile = tarfile.open("QPBO-v1.3.src.tar.gz", 'r:gz')
         tfile.extractall('.')
